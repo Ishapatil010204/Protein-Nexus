@@ -1,0 +1,13 @@
+streamlit
+requests
+pandas
+plotly.express
+Bio.SeqUtils
+networkx
+matplotlib.pyplot
+urllib.parse
+plotly.graph_objects
+st_aggrid
+py3Dmol
+stmol 
+streamlit.components.v1
