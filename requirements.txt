@@ -11,3 +11,4 @@ st_aggrid
 py3Dmol
 stmol 
 streamlit.components.v1
+PIL
