@@ -6,6 +6,5 @@ biopython
 networkx
 matplotlib
 Pillow
-st-aggrid
-py3Dmol
+st-aggrid==0.3.3
 stmol
