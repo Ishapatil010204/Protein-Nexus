@@ -8,3 +8,4 @@ matplotlib
 Pillow
 streamlit-aggrid
 stmol
+ipython_genutils
