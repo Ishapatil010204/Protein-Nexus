@@ -24,6 +24,17 @@ DB_COLORS = {
     "Reactome": "#8B0000"
 }
 
+# Database URLs for links
+DB_LINKS = {
+    "UniProt": "https://www.uniprot.org/",
+    "PDB": "https://www.rcsb.org/",
+    "AlphaFold": "https://alphafold.ebi.ac.uk/",
+    "STRING": "https://string-db.org/",
+    "KEGG": "https://www.kegg.jp/",
+    "NCBI": "https://www.ncbi.nlm.nih.gov/",
+    "Reactome": "https://reactome.org/"
+}
+
 # Configure page
 st.set_page_config(layout="wide", page_title="Protein Nexus", page_icon="🧬")
 
@@ -136,8 +147,8 @@ if page == "🏠 Home":
     st.title("Welcome to Protein Nexus💻🧬")
     st.markdown("""
     <div style="background-color: #e6f2ff; padding: 20px; border-radius: 10px; margin-bottom: 20px; color: #000000;">
-        <h3 style="color: #000000;">A Comprehensive Multi-Omics Protein Analysis Platform</h3>
-        <p>Integrating data from multiple biological databases for sequence analysis, structural visualization, 
+        <h3 style="color: #000000;">A Comprehensive Protein Analysis Platform</h3>
+        <p>Integrating data from multiple biological databases for sequence analysis, structural visualization,
         interaction networks, and evolutionary insights.</p>
     </div>
     """, unsafe_allow_html=True)
@@ -188,9 +199,10 @@ if page == "🏠 Home":
     db_cols = st.columns(4)
     for i, (db, color) in enumerate(DB_COLORS.items()):
         with db_cols[i % 4]:
+            link = DB_LINKS.get(db, "#")
             st.markdown(f"""
             <div class="database-card" style="border-left: 4px solid {color};">
-                <h4 style="color: {color};">{db}</h4>
+                <h4 style="color: {color};"><a href="{link}" target="_blank" style="text-decoration:none; color:inherit;">{db}</a></h4>
                 <p>Integrated {db} data access</p>
             </div>
             """, unsafe_allow_html=True)
@@ -408,13 +420,15 @@ elif page == "🔍 Search Protein":
                             # Structure & Interactions
                             if show_structural_prediction:
                                 st.markdown("### 🧪 3D Structure Visualization")
+                                # Increase width and height here to make the structure box bigger
                                 pdb_ids = [x['id'].upper() for x in data.get('uniProtKBCrossReferences', []) if x.get('database') in ['PDB', 'PDBsum']]
                                 if pdb_ids:
                                     selected_pdb = st.selectbox("Choose PDB structure:", pdb_ids)
-                                    view = py3Dmol.view(query=f'pdb:{selected_pdb}', width=800, height=500)
+                                    # Set width to 1000 and height to 700
+                                    view = py3Dmol.view(query=f'pdb:{selected_pdb}', width=1000, height=700)
                                     view.setStyle({'cartoon': {'color': 'spectrum'}})
                                     view.zoomTo()
-                                    showmol(view, height=500)
+                                    showmol(view, height=700)
                                     # Structure quality metrics
                                     st.markdown("### 🏆 Structure Quality Metrics")
                                     col1, col2, col3 = st.columns(3)
@@ -429,7 +443,9 @@ elif page == "🔍 Search Protein":
                                     st.markdown("### 🦠 AlphaFold Prediction")
                                     st.info("Showing predicted structure from AlphaFold Database")
                                     af_url = f"https://alphafold.ebi.ac.uk/entry/{accession}"
-                                    components.iframe(af_url, height=500, scrolling=True)
+                                    # Increase iframe size for bigger display
+                                    components.iframe(af_url, height=700, scrolling=True, width=1000)
+                                    # Note: streamlit.components.v1.iframe has optional width parameter
 
                             if show_interaction_network:
                                 st.markdown("### 🕸 Protein Interaction Network")
@@ -444,12 +460,12 @@ elif page == "🔍 Search Protein":
                                             partner = interaction['preferredName_B']
                                             G.add_node(partner)
                                             G.add_edge(accession, partner)
-                                        pos = nx.spring_layout(G, seed=42)
+                                        pos = nx.spring_layout(G, seed=32)
                                         node_sizes = [2000 if node == accession else 1000 for node in G.nodes()]
                                         node_colors = ['#3498db' if node == accession else '#95a5a6' for node in G.nodes()]
-                                        fig, ax = plt.subplots(figsize=(10, 8))
-                                        nx.draw(G, pos, with_labels=True, node_size=node_sizes, node_color=node_colors, font_size=10, font_weight='bold', edge_color='#bdc3c7', width=1.5, ax=ax)
-                                        ax.set_title("Protein Interaction Network", pad=20, fontsize=14, color='black')
+                                        fig, ax = plt.subplots(figsize=(8, 6))
+                                        nx.draw(G, pos, with_labels=True, node_size=node_sizes, node_color=node_colors, font_size=10, font_weight='bold', edge_color='#bdc3c7', width=1.2, ax=ax)
+                                        ax.set_title("Protein Interaction Network", pad=8, fontsize=8, color='black')
                                         st.pyplot(fig)
                                         st.markdown("#### Interaction Details")
                                         interaction_df = pd.DataFrame([{
@@ -457,7 +473,7 @@ elif page == "🔍 Search Protein":
                                             'Score': i['score'],
                                             'Interaction Type': ', '.join(i.get('ncbiTaxon2Names', [])) if isinstance(i.get('ncbiTaxon2Names'), list) else 'N/A',
                                         } for i in interactions])
-                                        AgGrid(interaction_df, height=250, fit_columns_on_grid_load=True)
+                                        AgGrid(interaction_df, height=100, fit_columns_on_grid_load=True)
                                     else:
                                         st.warning("No interaction data found in STRING DB")
                                 else:
