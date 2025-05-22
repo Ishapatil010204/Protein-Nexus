@@ -96,7 +96,6 @@ st.markdown(f"""
         color:#000000;
         border-bottom: 2px solid #3498db;
         padding-bottom: 5px;
-        margin-top: 20px;
     }}
     .metric-card {{
         background-color: #f8f9fa;
@@ -135,12 +134,7 @@ st.markdown(f"""
 
 # -------- Navigation --------
 st.sidebar.title("🧬 Protein Explorer Pro")
-# Add an option for About Creator
 page = st.sidebar.radio("Navigation", ["🏠 Home", "🔍 Search Protein", "📚 Tutorial", "👤 About"])
-
-# Initialize session state if not set
-if 'current_section' not in st.session_state:
-    st.session_state['current_section'] = 'Home'
 
 # -------- Home Page --------
 if page == "🏠 Home":
@@ -196,14 +190,30 @@ if page == "🏠 Home":
     </div>
     """, unsafe_allow_html=True)
     st.markdown("## Supported Databases")
+    # Updated section with descriptions
     db_cols = st.columns(4)
     for i, (db, color) in enumerate(DB_COLORS.items()):
         with db_cols[i % 4]:
             link = DB_LINKS.get(db, "#")
+            description = ""
+            if db == "UniProt":
+                description = "A comprehensive resource for protein sequence and functional information."
+            elif db == "PDB":
+                description = "The Protein Data Bank, the primary repository for 3D structural data of proteins and nucleic acids."
+            elif db == "AlphaFold":
+                description = "DeepMind's protein structure prediction database providing high-accuracy models."
+            elif db == "STRING":
+                description = "A database of known and predicted protein-protein interactions."
+            elif db == "KEGG":
+                description = "A collection of pathway maps representing molecular interaction networks."
+            elif db == "NCBI":
+                description = "A broad resource offering genetic, genomic, and biomedical data."
+            elif db == "Reactome":
+                description = "A curated database of biological pathways and processes."
             st.markdown(f"""
             <div class="database-card" style="border-left: 4px solid {color};">
                 <h4 style="color: {color};"><a href="{link}" target="_blank" style="text-decoration:none; color:inherit;">{db}</a></h4>
-                <p>Integrated {db} data access</p>
+                <p>{description}</p>
             </div>
             """, unsafe_allow_html=True)
 
@@ -429,15 +439,24 @@ elif page == "🔍 Search Protein":
                                     view.setStyle({'cartoon': {'color': 'spectrum'}})
                                     view.zoomTo()
                                     showmol(view, height=700)
-                                    # Structure quality metrics
-                                    st.markdown("### 🏆 Structure Quality Metrics")
-                                    col1, col2, col3 = st.columns(3)
+                                    # **Removed sequence highlight code here**
+                                    # Show sequence beside model
+                                    col1, col2 = st.columns([2, 1])
                                     with col1:
-                                        st.markdown("<div class='metric-card'><h4>Ramachandran Favored</h4><h3>92%</h3><p>+2% vs average</p></div>", unsafe_allow_html=True)
+                                        st.markdown("### Protein Sequence")
+                                        if 'sequence' in data:
+                                            seq = data['sequence']['value']
+                                            # Show sequence with style
+                                            st.markdown(
+                                                f"<div style='font-family: monospace; font-size: 14px; max-height: 200px; overflow-y: auto; border: 1px solid #ccc; padding: 10px; background-color:#f0f8ff;'>{seq}</div>",
+                                                unsafe_allow_html=True
+                                            )
+                                            st.write(f"Total Length: {len(seq)} amino acids")
+                                        else:
+                                            st.write("Sequence data not available.")
                                     with col2:
-                                        st.markdown("<div class='metric-card'><h4>Rotamer Outliers</h4><h3>3</h3><p>-1 vs typical</p></div>", unsafe_allow_html=True)
-                                    with col3:
-                                        st.markdown("<div class='metric-card'><h4>Clashscore</h4><h3>8.5</h3><p>Better than 90%</p></div>", unsafe_allow_html=True)
+                                        st.markdown("###")
+                                        # Removed highlighted residue placeholder
                                 else:
                                     st.warning("No experimental structures found in PDB")
                                     st.markdown("### 🦠 AlphaFold Prediction")
@@ -445,8 +464,15 @@ elif page == "🔍 Search Protein":
                                     af_url = f"https://alphafold.ebi.ac.uk/entry/{accession}"
                                     # Increase iframe size for bigger display
                                     components.iframe(af_url, height=700, scrolling=True, width=1000)
-                                    # Note: streamlit.components.v1.iframe has optional width parameter
-
+                                    # Show sequence info for AlphaFold
+                                    if 'sequence' in data:
+                                        seq = data['sequence']['value']
+                                        st.markdown(
+                                            f"<div style='font-family: monospace; font-size: 14px; max-height: 200px; overflow-y: auto; border: 1px solid #ccc; padding: 10px; background-color:#f0f8ff;'>"
+                                            f"{seq}</div>",
+                                            unsafe_allow_html=True
+                                        )
+                                        st.write(f"Total Length: {len(seq)} amino acids")
                             if show_interaction_network:
                                 st.markdown("### 🕸 Protein Interaction Network")
                                 string_api_url = f"https://string-db.org/api/json/network?identifiers={accession}"
@@ -478,7 +504,6 @@ elif page == "🔍 Search Protein":
                                         st.warning("No interaction data found in STRING DB")
                                 else:
                                     st.error("Couldn't connect to STRING API")
-
                         with tab4:
                             # Evolutionary Analysis
                             if show_evolutionary:
@@ -539,7 +564,6 @@ elif page == "🔍 Search Protein":
                                         <a href="{blast_url}" target="_blank">Open BLAST</a>
                                     </div>
                                     """, unsafe_allow_html=True)
-
                         with tab5:
                             # Literature
                             if show_publications:
@@ -583,7 +607,48 @@ elif page == "🔍 Search Protein":
                     st.warning(f"No protein found for query: {query}")
             else:
                 st.error("Failed to connect to UniProt API")
-
+        
+        # --- New: Batch analysis for multiple proteins ---
+        # Add a textarea for batch input
+        st.markdown("---")
+        st.header("Batch Protein Analysis")
+        batch_input = st.text_area("Enter multiple Protein IDs or Gene Names, separated by commas or new lines:", height=150, key="batch_input")
+        if st.button("Analyze Multiple Proteins"):
+            # Process input
+            raw_ids = [id.strip() for id in batch_input.replace(',', '\n').split('\n')]
+            ids = [id for id in raw_ids if id]
+            if not ids:
+                st.warning("Please enter at least one protein ID or gene name for batch analysis.")
+            else:
+                for pid in ids:
+                    st.markdown(f"## Analysis for: {pid}")
+                    # Here, you can reuse the existing code logic to fetch and display info for each ID
+                    # For simplicity, calling the same code as above, but adjusted to process each pid
+                    try:
+                        # Search for each ID
+                        search_url = f"https://rest.uniprot.org/uniprotkb/search?query={pid}&format=json&fields=accession"
+                        resp = requests.get(search_url)
+                        if resp.status_code == 200:
+                            results = resp.json()
+                            if results.get('results'):
+                                accession = results['results'][0]['primaryAccession']
+                                full_url = f"https://rest.uniprot.org/uniprotkb/{accession}.json"
+                                full_resp = requests.get(full_url)
+                                if full_resp.status_code == 200:
+                                    data = full_resp.json()
+                                    # Display minimal info for batch
+                                    st.markdown(f"**Protein: {data['proteinDescription']['recommendedName']['fullName']['value']}**")
+                                    st.write(f"Accession: {accession}")
+                                    # Could add summarized info here
+                                    # For full details, could add a button or link, or call functions
+                                else:
+                                    st.warning(f"Could not retrieve detailed info for {pid}")
+                            else:
+                                st.warning(f"No results found for {pid}")
+                        else:
+                            st.warning(f"Failed to search for {pid}")
+                    except Exception as e:
+                        st.error(f"Error processing {pid}: {e}")
 
 # -------- About Creator Page --------
 elif page == "👤 About":
